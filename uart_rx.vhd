@@ -9,7 +9,7 @@ entity rx is
 		
        		baud_in: in std_logic;
        		rx: in std_logic;
-       	
+		
 		byte_received: out std_logic_vector(7 downto 0);
        		err: in std_logic -- For parity errors
 	);
