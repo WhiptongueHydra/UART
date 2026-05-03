@@ -16,8 +16,8 @@ architecture sim of tb_uart_rx is
 	-- signal err: std_logic; -- Unused at present
 
 	-- Test data
-	type uart_data_t is array (0 to 3) of std_logic_vector(7 downto 0);
-	constant uart_data: uart_data_t := (x"DE", x"AD", x"BE", x"EF");
+	type uart_data_t is array (0 to 7) of std_logic_vector(7 downto 0);
+	constant uart_data: uart_data_t := (x"DE", x"AD", x"BE", x"EF", x"CA", x"FE", x"BA", x"BE");
 
 	-- Sim signals
 	constant clk_T: time := 10 ns;
