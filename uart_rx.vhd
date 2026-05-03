@@ -2,7 +2,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity rx is
+-- Things to fix:
+-- 1. Stop bit logic needs sorting
+-- 2. I think traditional UART uses constant shifting, 
+--    dont know how they square constant shifting with
+--    forcing a centre sample on rx data
+
+entity uart_rx is
        port (
        		clk: in std_logic;
 		rst: in std_logic;
@@ -12,16 +18,19 @@ entity rx is
        		rx: in std_logic;
 
 		byte_received: out std_logic_vector(7 downto 0);
-       		err: in std_logic -- For parity errors
+       		err: out std_logic -- For parity errors
 	);
-end entity rx;
+end entity uart_rx;
 
-architecture A1 of rx is
+architecture A1 of uart_rx is
 	type uart_state is (idle, receiving);
 	signal p_state, n_state: uart_state := idle;
 	-- Enough room for data and parity
 	signal shift_reg: std_logic_vector(8 downto 0) := (others => '1');
 	signal latched_rx: std_logic_vector(8 downto 0) := (others => '1');
+
+	signal baud_en: std_logic := '0';
+	signal done: std_logic := '0';
 
 	signal count_en: std_logic := '0'; 
 	constant max_count: integer := 8; 
@@ -29,7 +38,9 @@ architecture A1 of rx is
 
 	signal parity_int: std_logic := '0';
 begin
+	latched_rx <= shift_reg when done='1' else latched_rx;
 	byte_received <= latched_rx(8 downto 1);
+	baud_req <= baud_en;
 
 	shifter_proc: process(clk)
 	begin
@@ -37,12 +48,15 @@ begin
 			if rst='1' then
 				shift_reg <= (others => '1');
 			else
-				if done='1' then
-					latched_rx <= shift_reg;
-				end if;		
-				
+				--if done='1' then
+				--	latched_rx <= shift_reg;
+				--end if;		
+			
+				-- Not sure how I feel about this actually. 	
 				if baud_in='1' then
-					shift_reg <= shift_reg(8 downto 1) & rx;
+					-- shift_reg <= shift_reg(8 downto 1) & rx;
+					-- Im an idiot, comment of shame. ^
+					shift_reg <= shift_reg(7 downto 0) & rx;
 				end if;						
 			end if;
 		end if;
@@ -51,7 +65,11 @@ begin
 	sync_state_changer: process(clk)
 	begin
 		if rising_edge(clk) then
-			p_state <= n_state;	
+			if rst='1' then
+				p_state <= idle;
+			else
+				p_state <= n_state;	
+			end if;
 		end if;
 	end process sync_state_changer;
 
@@ -62,14 +80,12 @@ begin
 				counter <= 0;
 			else
 				done <= '0';
-				if baud_en='1' then
-					if baud='1' then
-						if counter < max_count then
-							counter <= counter + 1;
-						else
-							counter <= 0;
-							done <= '1';
-						end if;
+				if baud_in='1' then
+					if counter < max_count then
+						counter <= counter + 1;
+					else
+						counter <= 0;
+						done <= '1';
 					end if;
 				end if;
 			end if;
@@ -84,13 +100,13 @@ begin
 		count_en <= '0';
 		baud_en <= '0';
 		case p_state is
-			when idle =>
-				baud_req <= '0'
+			when idle =>				
 				if rx='0' then
-					n_state <= receiving;	
+					n_state <= receiving;
+					baud_en <= '1';	
 				end if;	
 			when receiving =>
-				baud_en <= '1'
+				baud_en <= '1';
 				if done='1' then
 					n_state <= idle;
 				end if;		
