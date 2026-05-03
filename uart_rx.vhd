@@ -2,11 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
--- Things to fix:
--- 1. Stop bit logic needs sorting
--- 2. I think traditional UART uses constant shifting, 
---    dont know how they square constant shifting with
---    forcing a centre sample on rx data
 
 entity uart_rx is
        port (
@@ -21,6 +16,7 @@ entity uart_rx is
        		err: out std_logic -- For parity errors
 	);
 end entity uart_rx;
+
 
 architecture A1 of uart_rx is
 	type uart_state is (idle, receiving);
